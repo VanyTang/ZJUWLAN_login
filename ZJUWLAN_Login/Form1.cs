@@ -1,4 +1,4 @@
-﻿#define OUTPUTLOG
+﻿//#define OUTPUTLOG
 
 using System;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ namespace ZJUWLAN_Login
 
         const string strConfigFileName = "zjuwlan_config.txt";
         const string strLoginRequestURL = @"https://net.zju.edu.cn/cgi-bin/srun_portal";
+        const string strDropRequestURL = @"https://net.zju.edu.cn/rad_online.php";
         const string strPathLog = "wlanlogin.log";
 
 #if OUTPUTLOG
@@ -212,19 +213,7 @@ namespace ZJUWLAN_Login
                     return;
                 }
 
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(strLoginRequestURL);
-                req.Method = "POST";
-                req.Accept = "*/*";
-                req.ContentType = "application/x-www-form-urlencoded";
-                req.Host = "net.zju.edu.cn";
-                req.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240";
-                var reqStream = req.GetRequestStream();
-                byte[] contentBytes = Encoding.Default.GetBytes(getContentString());
-                reqStream.Write(contentBytes, 0, contentBytes.Length);
-
-                var rsp = req.GetResponse();
-                StreamReader sr = new StreamReader(rsp.GetResponseStream());
-                string strRsp = sr.ReadToEnd();
+                string strRsp = postData(strLoginRequestURL, getContentString());
                 if (strRsp.Contains("login_ok"))//login Ok!
                 {
                     setStatusText("Login Ok!");
@@ -238,7 +227,16 @@ namespace ZJUWLAN_Login
                 }
                 else if (strRsp.Contains("您已在线"))
                 {
-                    setStatusText("");
+                    setStatusText("您已在线，正在自动踢掉用户");
+                    var strDropRsp = dropUser(txtStuID.Text, txtPwd.Text);
+                    if (strDropRsp == "ok")
+                    {
+                        log("Kick out the other user.");
+                    }
+                    else
+                    {
+                        log("fail to kick out. " + strDropRsp);
+                    }
                 }
                 else
                 {
@@ -254,6 +252,34 @@ namespace ZJUWLAN_Login
             {
                 isInLogin = false;
             }
+        }
+
+        private string postData(string strURL, string strData)
+        {
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(strURL);
+            req.Method = "POST";
+            req.Accept = "*/*";
+            req.ContentType = "application/x-www-form-urlencoded";
+            req.Host = "net.zju.edu.cn";
+            req.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240";
+            var reqStream = req.GetRequestStream();
+            byte[] contentBytes = Encoding.Default.GetBytes(strData);
+            reqStream.Write(contentBytes, 0, contentBytes.Length);
+
+            var rsp = req.GetResponse();
+            StreamReader sr = new StreamReader(rsp.GetResponseStream());
+            string strRsp = sr.ReadToEnd();
+            sr.Close();
+            return strRsp;
+        }
+
+        private string dropUser(string id, string pwd)
+        {
+            StringWriter strw = new StringWriter();
+            strw.Write("action=auto_dm&");
+            strw.Write(string.Format("username={0}&", id.Trim()));
+            strw.Write(string.Format("password={0}&", pwd));
+            return postData(strDropRequestURL, strw.ToString());
         }
 
         private string getContentString()
