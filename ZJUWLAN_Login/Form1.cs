@@ -286,11 +286,10 @@ namespace ZJUWLAN_Login
         {
             StringWriter strw = new StringWriter();
             strw.Write(string.Format("ac_id={0}&", 3));
-            strw.Write("action.login&");
-            strw.Write("mac=undefined&");
+            strw.Write("action=login&");
             strw.Write("type=1&");
-            strw.Write(string.Format("password={0}&", txtPwd.Text));
             strw.Write(string.Format("username={0}&", txtStuID.Text));
+            strw.Write(string.Format("password={0}&", txtPwd.Text));
             return strw.ToString();
         }
 
